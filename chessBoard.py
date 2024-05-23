@@ -1,4 +1,4 @@
-class ChessBoard:
+class chessBoard:
     def __init__(self, whitePawn, whiteKnight, whiteBishop, whiteRook, whiteQueen, whiteKing,
                  blackPawn, blackKnight, blackBishop, blackRook, blackQueen, blackKing):
         self._whitePawn = whitePawn
@@ -13,75 +13,135 @@ class ChessBoard:
         self._blackRook = blackRook
         self._blackQueen = blackQueen
         self._blackKing = blackKing
+        self._update_empty()
 
-    def whitePawn(self):
+    def _update_empty(self):
+        all_pieces = (self._whitePawn | self._whiteKnight | self._whiteBishop | self._whiteRook | self._whiteQueen | self._whiteKing |
+                      self._blackPawn | self._blackKnight | self._blackBishop | self._blackRook | self._blackQueen | self._blackKing)
+        self._empty = ~all_pieces & 0xFFFFFFFFFFFFFFFF
+
+    def get_whitePawn(self):
         return self._whitePawn
 
-    def whitePawn(self, value):
+    def set_whitePawn(self, value):
         self._whitePawn = value
+        self._update_empty()
 
-    def whiteKnight(self):
+    def get_whiteKnight(self):
         return self._whiteKnight
 
-    def whiteKnight(self, value):
+    def set_whiteKnight(self, value):
         self._whiteKnight = value
+        self._update_empty()
 
-    def whiteBishop(self):
+    def get_whiteBishop(self):
         return self._whiteBishop
 
-    def whiteBishop(self, value):
+    def set_whiteBishop(self, value):
         self._whiteBishop = value
+        self._update_empty()
 
-    def whiteRook(self):
+    def get_whiteRook(self):
         return self._whiteRook
 
-    def whiteRook(self, value):
+    def set_whiteRook(self, value):
         self._whiteRook = value
+        self._update_empty()
 
-    def whiteQueen(self):
+    def get_whiteQueen(self):
         return self._whiteQueen
 
-    def whiteQueen(self, value):
+    def set_whiteQueen(self, value):
         self._whiteQueen = value
+        self._update_empty()
 
-    def whiteKing(self):
+    def get_whiteKing(self):
         return self._whiteKing
 
-    def whiteKing(self, value):
+    def set_whiteKing(self, value):
         self._whiteKing = value
+        self._update_empty()
 
-    def blackPawn(self):
+    def get_blackPawn(self):
         return self._blackPawn
 
-    def blackPawn(self, value):
+    def set_blackPawn(self, value):
         self._blackPawn = value
+        self._update_empty()
 
-    def blackKnight(self):
+    def get_blackKnight(self):
         return self._blackKnight
 
-    def blackKnight(self, value):
+    def set_blackKnight(self, value):
         self._blackKnight = value
+        self._update_empty()
 
-    def blackBishop(self):
+    def get_blackBishop(self):
         return self._blackBishop
 
-    def blackBishop(self, value):
+    def set_blackBishop(self, value):
         self._blackBishop = value
+        self._update_empty()
 
-    def blackRook(self):
+    def get_blackRook(self):
         return self._blackRook
 
-    def blackRook(self, value):
+    def set_blackRook(self, value):
         self._blackRook = value
+        self._update_empty()
 
-    def blackQueen(self):
+    def get_blackQueen(self):
         return self._blackQueen
 
-    def blackQueen(self, value):
+    def set_blackQueen(self, value):
         self._blackQueen = value
+        self._update_empty()
 
-    def blackKing(self):
+    def get_blackKing(self):
         return self._blackKing
 
-    def blackKing(self, value):
+    def set_blackKing(self, value):
         self._blackKing = value
+        self._update_empty()
+
+    def get_empty(self):
+        return self._empty
+
+    def print_bitboard(self, bitboard):
+        print("    a b c d e f g h")
+        print("    _______________")
+        for rank in range(8):
+            row = 8 - rank
+            print(row, end=" | ")
+            for file in range(8):
+                index = rank * 8 + file
+                if (bitboard >> (63 - index)) & 1:
+                    print("1", end=" ")
+                else:
+                    print("0", end=" ")
+            print()
+        print()
+
+# Example usage
+board = chessBoard(
+    whitePawn=0x000000000000FF00,
+    whiteKnight=0x0000000000000042,
+    whiteBishop=0x0000000000000024,
+    whiteRook=0x0000000000000081,
+    whiteQueen=0x0000000000000008,
+    whiteKing=0x0000000000000010,
+    blackPawn=0x00FF000000000000,
+    blackKnight=0x4200000000000000,
+    blackBishop=0x2400000000000000,
+    blackRook=0x8100000000000000,
+    blackQueen=0x0800000000000000,
+    blackKing=0x1000000000000000
+)
+
+# Print the bitboard for white pawns
+print("White Pawns:")
+board.print_bitboard(board.get_whitePawn())
+
+# Print the bitboard for empty squares
+print("Empty squares:")
+board.print_bitboard(board.get_empty())
