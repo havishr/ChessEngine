@@ -41,7 +41,7 @@ class possibleMoves:
 
 
 board = chessBoard.chessBoard(
-    whitePawn=0x000000000000FF00,
+    whitePawn=0x0000800000007F00,
     whiteKnight=0x0000000000000042,
     whiteBishop=0x0000000000000024,
     whiteRook=0x0000000000000081,
@@ -55,9 +55,17 @@ board = chessBoard.chessBoard(
     blackKing=0x1000000000000000
 )
 
+
+
 pawnMoves = possibleMoves(board)
 
+print("White Pawn Bitboard)")
+print(board.print_bitboard(board.get_whitePawn()))
+
+
 pawnMoves.print_possible_moves(pawnMoves.possiblePawnMove(Color.WHITE))
+
+print("printed the white pieces")
 
 pawnMoves.print_possible_moves(pawnMoves.possiblePawnMove(Color.BLACK))
     

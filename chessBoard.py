@@ -138,10 +138,4 @@ board = chessBoard(
     blackKing=0x1000000000000000
 )
 
-# Print the bitboard for white pawns
-print("White Pawns:")
-board.print_bitboard(board.get_whitePawn())
 
-# Print the bitboard for empty squares
-print("Empty squares:")
-board.print_bitboard(board.get_empty())
