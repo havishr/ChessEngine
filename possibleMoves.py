@@ -1,27 +1,24 @@
 from enum import Enum
-
-import chessBoard
+from chessBoard import ChessBoard
 
 class Color(Enum):
     WHITE = "white"
     BLACK = "black"
+
 class possibleMoves:
     def __init__(self, chessBoard):
         self.chessBoard = chessBoard
 
-    
     def possiblePawnMove(self, color):
         if color == Color.WHITE:
-            pawnLocations = self.chessBoard.get_whitePawn()
-            possibleMoves = (pawnLocations << 8) & self.chessBoard.get_empty()
-            
+            pawnLocations = self.chessBoard.get_piece("pawns") & self.chessBoard._white_pieces
+            possiblePushes = (pawnLocations << 8) & self.chessBoard.get_empty()
+            possibleCaptures = ((pawnLocations << 7) & self.chessBoard._black_pieces) | (pawnLocations << 9) & self.chessBoard._black_pieces
         elif color == Color.BLACK:
-            pawnLocations = self.chessBoard.get_blackPawn()
-            possibleMoves = (pawnLocations >> 8) & self.chessBoard.get_empty()
-
-        return possibleMoves
-
-    
+            pawnLocations = self.chessBoard.get_piece("pawns") & self.chessBoard._black_pieces
+            possiblePushes = (pawnLocations >> 8) & self.chessBoard.get_empty()
+            possibleCaptures = (((pawnLocations >> 7)) & self.chessBoard._white_pieces) | (pawnLocations << 9) & self.chessBoard._white_pieces
+        return possiblePushes | possibleCaptures 
 
     def print_possible_moves(self, bitboard):
         print("    a b c d e f g h")
@@ -38,34 +35,28 @@ class possibleMoves:
             print()
         print()
 
-
-
-board = chessBoard.chessBoard(
-    whitePawn=0x0000800000007F00,
-    whiteKnight=0x0000000000000042,
-    whiteBishop=0x0000000000000024,
-    whiteRook=0x0000000000000081,
-    whiteQueen=0x0000000000000008,
-    whiteKing=0x0000000000000010,
-    blackPawn=0x00FF000000000000,
-    blackKnight=0x4200000000000000,
-    blackBishop=0x2400000000000000,
-    blackRook=0x8100000000000000,
-    blackQueen=0x0800000000000000,
-    blackKing=0x1000000000000000
+# Example usage
+board = ChessBoard(
+    pawns=0x00FF800000007F00,
+    knights=0x4200000000000042,
+    bishops=0x2400000000000024,
+    rooks=0x8100000000000081,
+    queens=0x0800000000000008,
+    kings=0x1000000000000010,
+    white_pieces=0x0000800000007FFF,
+    black_pieces=0xFFFF000000000000
 )
-
 
 
 pawnMoves = possibleMoves(board)
 
-print("White Pawn Bitboard)")
-print(board.print_bitboard(board.get_whitePawn()))
+print("All Pawn Bitboard")
+board.print_bitboard(board.get_piece("pawns"))
 
+board.print_bitboard(board.get_empty())
+
+board.print_bitboard(board._white_pieces)
 
 pawnMoves.print_possible_moves(pawnMoves.possiblePawnMove(Color.WHITE))
-
 print("printed the white pieces")
-
 pawnMoves.print_possible_moves(pawnMoves.possiblePawnMove(Color.BLACK))
-    
