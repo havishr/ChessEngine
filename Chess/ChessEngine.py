@@ -23,35 +23,119 @@ class GameState:
             'bB': 0x2400000000000000,  # Black bishops
             'bQ': 0x0800000000000000,  # Black queen
             'bK': 0x1000000000000000,  # Black king
-            "--": 0x0000111111110000
+            "--": 0x0000FFFFFFFF0000
         }
         self.whiteToMove = True
         self.moveLog = []
 
     def makeMove(self, move):
+
         if self.board[move.startRow][move.startCol] != "--":
+
             pieceMoved = self.board[move.startRow][move.startCol]
             pieceCaptured = self.board[move.endRow][move.endCol]
             self.board[move.startRow][move.startCol] = "--"
             self.board[move.endRow][move.endCol] = pieceMoved
             startSq = self.squareToBitboardIndex(move.startRow, move.startCol)
             endSq = self.squareToBitboardIndex(move.endRow, move.endCol)
+
             self.moveLog.append(move)
             self.whiteToMove = not self.whiteToMove
             self.updateBitboards(pieceMoved, pieceCaptured, startSq, endSq)
 
+
     def updateBitboards(self, pieceMoved, pieceCaptured, startSq, endSq):
         print(pieceMoved)
-        # Remove the piece from the start square
+
         self.bitboard[pieceMoved] &= ~(1 << (63 - startSq))
-        # Place the piece on the end square
+
         self.bitboard[pieceMoved] |= (1 << (63 - endSq))
-        # If a piece was captured, remove it from the bitboard
-        if pieceCaptured != "--":
-            self.bitboard[pieceCaptured] &= ~(1 << (63 - endSq))
+
+        self.bitboard[pieceMoved] |= (1 << (63 - startSq))
+
+        self.bitboard[pieceCaptured] &= ~(1 << (63 - endSq))
 
     def squareToBitboardIndex(self, row, col):
         return row * 8 + col
+    
+    def generateValidMoves(self):
+        moves = []
+        whitePieces = ['wp','wR','wN','wB','wQ','wK']
+        blackPieces = ['bp','wR','bN','bB','bQ','bK']
+
+        if self.whiteToMove:
+            for piece in whitePieces:
+                board = self.bitboard[piece]
+                if piece == 'wp':
+                    moves.append(self.getPawnMoves(board))
+                    
+                elif piece == 'wR':
+                    self.getRookMoves(board)
+                    moves.append(self.getRookMoves(board))
+
+
+                elif piece =='wN':
+                    self.getKnightMoves(board)
+                    moves.append(self.getKnightMoves(board))
+
+
+                elif piece == 'wB':
+                    self.getBishopMoves(board)
+                    moves.append(self.getBishopMoves(board))
+
+
+                elif piece == 'wQ':
+                    self.getQueenMoves(board)
+                    moves.append(self.getQueenMoves(board))
+
+                elif piece == 'wK':
+                    self.getKingMoves(board)
+                    moves.append(self.getKingMoves(board))
+        else:
+            for piece in blackPieces:
+                board = self.bitboard[piece]
+                if piece == 'bp':
+                    moves.append(self.getPawnMoves(board))
+                    
+                elif piece == 'bR':
+                    self.getRookMoves(board)
+                    moves.append(self.getRookMoves(board))
+
+
+                elif piece =='bN':
+                    self.getKnightMoves(board)
+                    moves.append(self.getKnightMoves(board))
+
+
+                elif piece == 'bB':
+                    self.getBishopMoves(board)
+                    moves.append(self.getBishopMoves(board))
+
+
+                elif piece == 'bQ':
+                    self.getQueenMoves(board)
+                    moves.append(self.getQueenMoves(board))
+
+                elif piece == 'bK':
+                    self.getKingMoves(board)
+                    moves.append(self.getKingMoves(board))
+        return moves
+
+
+
+
+    def getPawnMoves(self, board):
+
+    def getRookMoves(self, board):
+
+    def getKnightMoves(self, board):
+
+    def getBishopMoves(self, board):
+
+    def getQueenMoves(self, board):
+
+    def getKingMoves(self, board):
+
 
 def printBitboard(bitboard):
     for rank in range(8):
@@ -114,3 +198,5 @@ if __name__ == "__main__":
 
     print("After Move White Knight Board")
     printBitboard(gs.bitboard['wN'])
+
+    printBitboard(gs.bitboard["--"])
