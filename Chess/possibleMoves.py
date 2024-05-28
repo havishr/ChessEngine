@@ -35,6 +35,20 @@ class possibleMoves:
             print()
         print()
 
+    def get_rank(bitboard):
+        if bitboard == 0:
+            return None  # No pieces present in the bitboard
+        bit_position = (bitboard.bit_length() - 1)
+        return bit_position // 8
+    
+    def get_file(bitboard):
+        if bitboard == 0:
+            return None  # No pieces present in the bitboard
+        bit_position = (bitboard.bit_length() - 1)
+        return bit_position % 8
+
+
+
 # Example usage
 board = ChessBoard(
     pawns=0x00FF800000007F00,
