@@ -77,11 +77,11 @@ class GameState:
                     moves.extend(self.getKingMoves(isWhite=False))
 
         return moves
-    def popLSB(board):
-        lsb_index = (bb & -bb).bit_length() - 1  # Find the index of the LSB
-        bb &= bb - 1  # Clear the LSB
-        return lsb_index, bb
-
+    def popLSB(self, bb):
+        lsb = bb & -bb 
+        index = lsb.bit_length() - 1  
+        bb &= bb - 1 
+        return index, bb  
 
 
 
@@ -153,22 +153,36 @@ class GameState:
                 moves.append(Move(fromSquare, toSquare))
 
         return moves
+    
+    def getKnightMoves(self):
+        knight_offsets = [
+            (2, 1), (2, -1), (-2, 1), (-2, -1),
+            (1, 2), (1, -2), (-1, 2), (-1, -2)
+        ]  
+        
+        knight_bitboard = self.bitboard['wN'] if self.whiteToMove else self.bitboard['bN']
+        own_pieces = self.bitboard['wp'] | self.bitboard['wR'] | self.bitboard['wN'] | \
+                     self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if self.whiteToMove else \
+                     self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
+                     self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
+        
+        moves = []
+        for square in range(64):
+            if knight_bitboard & (1 << square):
+                x, y = divmod(square, 8)
+                for dx, dy in knight_offsets:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < 8 and 0 <= ny < 8:
+                        target_square = nx * 8 + ny
+                        if not (1 << target_square) & own_pieces:  
+                            moves.append((square, target_square))
+        print(moves)
 
- 
+        return moves
 
 
-    def printBitboard(bitboard):
-        for rank in range(8):
-            line = ""
-            for file in range(8):
-                square = rank * 8 + file
-                if (bitboard >> (63 - square)) & 1:
-                    line += "1 "
-                else:
-                    line += ". "
-            print(line)
-        print()
 
+    
 class Move:
     def __init__(self, from_square, to_square, promotion_piece=0):
         self.from_square = from_square
@@ -190,4 +204,4 @@ class Move:
 
 gs = GameState()
 
-gs.getPawnMoves()
+gs.getKnightMoves()
