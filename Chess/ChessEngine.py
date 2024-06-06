@@ -1,15 +1,5 @@
 class GameState:
     def __init__(self):
-        self.board = [
-            ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],  # First rank (black)
-            ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],  # Second rank (black pawns)
-            ["--", "--", "--", "--", "--", "--", "--", "--"],  # Third rank (empty)
-            ["--", "--", "--", "--", "--", "--", "--", "--"],  # Fourth rank (empty)
-            ["--", "--", "--", "--", "--", "--", "--", "--"],  # Fifth rank (empty)
-            ["--", "--", "--", "--", "--", "--", "--", "--"],  # Sixth rank (empty)
-            ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],  # Seventh rank (white pawns)
-            ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],  # Eighth rank (white)
-        ]
         self.bitboard = {
             'wp': 0x000000000000FF00,  # White pawns
             'wR': 0x0000000000000081,  # White rooks
@@ -25,35 +15,29 @@ class GameState:
             'bK': 0x1000000000000000,  # Black king
             "--": 0x0000FFFFFFFF0000
         }
+        self.constants = {
+            'Rank1': 0x00000000000000FF,  # 1st rank
+            'Rank2': 0x000000000000FF00,  # 2nd rank
+            'Rank3': 0x0000000000FF0000,  # 3rd rank
+            'Rank4': 0x00000000FF000000,  # 4th rank
+            'Rank5': 0x000000FF00000000,  # 5th rank
+            'Rank6': 0x0000FF0000000000,  # 6th rank
+            'Rank7': 0x00FF000000000000,  # 7th rank
+            'Rank8': 0xFF00000000000000,  # 8th rank
+
+            'FileA': 0x0101010101010101,  # File A
+            'FileB': 0x0202020202020202,  # File B
+            'FileC': 0x0404040404040404,  # File C
+            'FileD': 0x0808080808080808,  # File D
+            'FileE': 0x1010101010101010,  # File E
+            'FileF': 0x2020202020202020,  # File F
+            'FileG': 0x4040404040404040,  # File G
+            'FileH': 0x8080808080808080   # File H
+        }
+
         self.whiteToMove = True
         self.moveLog = []
 
-    def makeMove(self, move):
-
-        if self.board[move.startRow][move.startCol] != "--":
-
-            pieceMoved = self.board[move.startRow][move.startCol]
-            pieceCaptured = self.board[move.endRow][move.endCol]
-            self.board[move.startRow][move.startCol] = "--"
-            self.board[move.endRow][move.endCol] = pieceMoved
-            startSq = self.squareToBitboardIndex(move.startRow, move.startCol)
-            endSq = self.squareToBitboardIndex(move.endRow, move.endCol)
-
-            self.moveLog.append(move)
-            self.whiteToMove = not self.whiteToMove
-            self.updateBitboards(pieceMoved, pieceCaptured, startSq, endSq)
-
-
-    def updateBitboards(self, pieceMoved, pieceCaptured, startSq, endSq):
-        print(pieceMoved)
-
-        self.bitboard[pieceMoved] &= ~(1 << (63 - startSq))
-
-        self.bitboard[pieceMoved] |= (1 << (63 - endSq))
-
-        self.bitboard[pieceMoved] |= (1 << (63 - startSq))
-
-        self.bitboard[pieceCaptured] &= ~(1 << (63 - endSq))
 
     def squareToBitboardIndex(self, row, col):
         return row * 8 + col
@@ -65,138 +49,145 @@ class GameState:
 
         if self.whiteToMove:
             for piece in whitePieces:
-                board = self.bitboard[piece]
                 if piece == 'wp':
-                    moves.append(self.getPawnMoves(board))
-                    
+                    moves.extend(self.getPawnMoves(isWhite=True))
                 elif piece == 'wR':
-                    self.getRookMoves(board)
-                    moves.append(self.getRookMoves(board))
-
-
-                elif piece =='wN':
-                    self.getKnightMoves(board)
-                    moves.append(self.getKnightMoves(board))
-
-
+                    moves.extend(self.getRookMoves(isWhite=True))
+                elif piece == 'wN':
+                    moves.extend(self.getKnightMoves(isWhite=True))
                 elif piece == 'wB':
-                    self.getBishopMoves(board)
-                    moves.append(self.getBishopMoves(board))
-
-
+                    moves.extend(self.getBishopMoves(isWhite=True))
                 elif piece == 'wQ':
-                    self.getQueenMoves(board)
-                    moves.append(self.getQueenMoves(board))
-
+                    moves.extend(self.getQueenMoves(isWhite=True))
                 elif piece == 'wK':
-                    self.getKingMoves(board)
-                    moves.append(self.getKingMoves(board))
+                    moves.extend(self.getKingMoves(isWhite=True))
         else:
             for piece in blackPieces:
-                board = self.bitboard[piece]
                 if piece == 'bp':
-                    moves.append(self.getPawnMoves(board))
-                    
+                    moves.extend(self.getPawnMoves(isWhite=False))
                 elif piece == 'bR':
-                    self.getRookMoves(board)
-                    moves.append(self.getRookMoves(board))
-
-
-                elif piece =='bN':
-                    self.getKnightMoves(board)
-                    moves.append(self.getKnightMoves(board))
-
-
+                    moves.extend(self.getRookMoves(isWhite=False))
+                elif piece == 'bN':
+                    moves.extend(self.getKnightMoves(isWhite=False))
                 elif piece == 'bB':
-                    self.getBishopMoves(board)
-                    moves.append(self.getBishopMoves(board))
-
-
+                    moves.extend(self.getBishopMoves(isWhite=False))
                 elif piece == 'bQ':
-                    self.getQueenMoves(board)
-                    moves.append(self.getQueenMoves(board))
-
+                    moves.extend(self.getQueenMoves(isWhite=False))
                 elif piece == 'bK':
-                    self.getKingMoves(board)
-                    moves.append(self.getKingMoves(board))
+                    moves.extend(self.getKingMoves(isWhite=False))
+
+        return moves
+    def popLSB(board):
+        lsb_index = (bb & -bb).bit_length() - 1  # Find the index of the LSB
+        bb &= bb - 1  # Clear the LSB
+        return lsb_index, bb
+
+
+
+
+
+
+
+    def getPawnMoves(self):
+        moves = []
+        empty = self.bitboard["--"]
+
+        if self.whiteToMove:
+            pawnBoard = self.bitboard["wp"]
+            enemyPieces = self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
+            singlePush = (pawnBoard << 8) & empty
+            doublePush = ((pawnBoard & self.constants["Rank2"]) << 16) & empty & (empty << 8)
+            leftCaptures = (pawnBoard << 9) & ~self.constants["FileA"] & enemyPieces
+            rightCaptures = (pawnBoard << 7) & ~self.constants["FileH"] & enemyPieces
+
+            while singlePush:
+                toSquare, singlePush = self.popLSB(singlePush)
+                fromSquare = toSquare - 8
+                moves.append(Move(fromSquare, toSquare))
+
+            while doublePush:
+                toSquare, doublePush = self.popLSB(doublePush)
+                fromSquare = toSquare - 16
+                moves.append(Move(fromSquare, toSquare))
+
+            while leftCaptures:
+                toSquare, leftCaptures = self.popLSB(leftCaptures)
+                fromSquare = toSquare - 9
+                moves.append(Move(fromSquare, toSquare))
+
+            while rightCaptures:
+                toSquare, rightCaptures = self.popLSB(rightCaptures)
+                fromSquare = toSquare - 7
+                moves.append(Move(fromSquare, toSquare))
+            print(moves)
+        else:
+            pawnBoard = self.bitboard["bp"]
+            enemyPieces = self.bitboard['wp'] | self.bitboard['wR'] | self.bitboard['wN'] | self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK']
+            singlePush = (pawnBoard >> 8) & empty
+            doublePush = ((pawnBoard & self.constants["Rank7"]) >> 16) & empty & (empty >> 8)
+            leftCaptures = (pawnBoard >> 9) & ~self.constants["FileH"] & enemyPieces
+            rightCaptures = (pawnBoard >> 7) & ~self.constants["FileA"] & enemyPieces
+
+            while singlePush:
+                toSquare, singlePush = self.popLSB(singlePush)
+                fromSquare = toSquare + 8
+
+                moves.append(Move(fromSquare, toSquare))
+
+            while doublePush:
+                toSquare, doublePush = self.popLSB(doublePush)
+                fromSquare = toSquare + 16
+
+                moves.append(Move(fromSquare, toSquare))
+
+            while leftCaptures:
+                toSquare, leftCaptures = self.popLSB(leftCaptures)
+                fromSquare = toSquare + 9
+
+                moves.append(Move(fromSquare, toSquare))
+
+            while rightCaptures:
+                toSquare, rightCaptures = self.popLSB(rightCaptures)
+                fromSquare = toSquare + 7
+
+                moves.append(Move(fromSquare, toSquare))
+
         return moves
 
+ 
 
 
-
-    def getPawnMoves(self, board):
-
-    def getRookMoves(self, board):
-
-    def getKnightMoves(self, board):
-
-    def getBishopMoves(self, board):
-
-    def getQueenMoves(self, board):
-
-    def getKingMoves(self, board):
-
-
-def printBitboard(bitboard):
-    for rank in range(8):
-        line = ""
-        for file in range(8):
-            square = rank * 8 + file
-            if (bitboard >> (63 - square)) & 1:
-                line += "1 "
-            else:
-                line += ". "
-        print(line)
-    print()
+    def printBitboard(bitboard):
+        for rank in range(8):
+            line = ""
+            for file in range(8):
+                square = rank * 8 + file
+                if (bitboard >> (63 - square)) & 1:
+                    line += "1 "
+                else:
+                    line += ". "
+            print(line)
+        print()
 
 class Move:
-    ranksToRows = {"1": 7, "2": 6, "3": 5, "4": 4, "5": 3, "6": 2, "7": 1, "8": 0}
-    rowsToRanks = {v: k for k, v in ranksToRows.items()}
-    filesToCols = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
-    colsToFiles = {v: k for k, v in filesToCols.items()}
+    def __init__(self, from_square, to_square, promotion_piece=0):
+        self.from_square = from_square
+        self.to_square = to_square
+        self.promotion_piece = promotion_piece
+    
+    def encode(self):
+        return self.from_square | (self.to_square << 6) | (self.promotion_piece << 12)
 
-    def __init__(self, startSq, endSq, board):
-        self.startRow = startSq[0]
-        self.startCol = startSq[1]
-        self.endRow = endSq[0]
-        self.endCol = endSq[1]
-        self.pieceMoved = board[self.startRow][self.startCol]
-        self.pieceCaptured = board[self.endRow][self.endCol]
-
-    def getChessNotation(self):
-        return self.getRankFile(self.startRow, self.startCol) + self.getRankFile(self.endRow, self.endCol)
-
-    def getRankFile(self, r, c):
-        return self.colsToFiles[c] + self.rowsToRanks[r]
+    @staticmethod
+    def decode(move):
+        from_square = move & 0x3F           # Extract bits 0-5
+        to_square = (move >> 6) & 0x3F      # Extract bits 6-11
+        promotion_piece = (move >> 12) & 0xF # Extract bits 12-15
+        return Move(from_square, to_square, promotion_piece)
 
     def __repr__(self):
-        return f"{self.pieceMoved} from {self.getRankFile(self.startRow, self.startCol)} to {self.getRankFile(self.endRow, self.endCol)}, capturing {self.pieceCaptured}"
+        return f"Move(from {self.from_square}, to {self.to_square}, promotion {self.promotion_piece})"
 
-if __name__ == "__main__":
-    gs = GameState()
+gs = GameState()
 
-    print("Before Move White Pawn Board")
-    printBitboard(gs.bitboard['wp'])
-    move = Move((6, 4), (4, 4), gs.board)  # Example move: e2 to e4
-    gs.makeMove(move)
-    print("After Move White Pawn Board")
-    printBitboard(gs.bitboard['wp'])
-
-
-    print("Before Move Black Pawn Board")
-    printBitboard(gs.bitboard['bp'])
-    move = Move((1, 4), (3, 4), gs.board)  # Example move: e7 to e5
-    gs.makeMove(move)
-    print("After Move Black Pawn Board")
-    printBitboard(gs.bitboard['bp'])
-
-    print("Before Move White Knight Board")
-    printBitboard(gs.bitboard['wN'])
-
-    move = Move((7, 1), (5, 2), gs.board)  # Example move: Nb1 to Nc3
-    gs.makeMove(move)
-
-    print("After Move White Knight Board")
-    printBitboard(gs.bitboard['wN'])
-
-    printBitboard(gs.bitboard["--"])
+gs.getPawnMoves()
