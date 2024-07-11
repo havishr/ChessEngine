@@ -5,14 +5,14 @@ class GameState:
             'wR': 0x0000000000000081,  # White rooks
             'wN': 0x0000000000000042,  # White knights
             'wB': 0x0000000000000024,  # White bishops
-            'wQ': 0x0000000000000008,  # White queen
-            'wK': 0x0000000000000010,  # White king
+            'wQ': 0x0000000000000010,  # White queen
+            'wK': 0x0000000000000008,  # White king
             'bp': 0x00FF000000000000,  # Black pawns
             'bR': 0x8100000000000000,  # Black rooks
             'bN': 0x4200000000000000,  # Black knights
             'bB': 0x2400000000000000,  # Black bishops
-            'bQ': 0x0800000000000000,  # Black queen
-            'bK': 0x1000000000000000,  # Black king
+            'bQ': 0x1000000000000000,  # Black queen
+            'bK': 0x0800000000000000,  # Black king
             "empty": 0x0000FFFFFFFF0000
         }
         self.constants = {
@@ -38,6 +38,7 @@ class GameState:
 
         self.whiteToMove = True
         self.moveLog = []
+        self.attackedSquares = set()
 
     def printBitboard(self):
         # Initialize an empty board display
@@ -76,23 +77,100 @@ class GameState:
         if moving_piece:
             # Clear the from square
             self.bitboard[moving_piece] &= ~(1 << move.from_square)
+
             # Remove any piece that might be at the destination square
+            captured_piece = None
             for piece, bitboard in self.bitboard.items():
                 if piece != 'empty' and (bitboard & (1 << move.to_square)):
+                    captured_piece = piece
                     self.bitboard[piece] &= ~(1 << move.to_square)
                     break
-            # Set the to square
-            self.bitboard[moving_piece] |= (1 << move.to_square)
+
+            # Handle castling
+            if move.special_move == Move.CASTLE_KINGSIDE:
+                if self.whiteToMove:
+                    self.bitboard['wR'] &= ~(1 << 7)
+                    self.bitboard['wR'] |= (1 << 5)
+                else:
+                    self.bitboard['bR'] &= ~(1 << 63)
+                    self.bitboard['bR'] |= (1 << 61)
+            elif move.special_move == Move.CASTLE_QUEENSIDE:
+                if self.whiteToMove:
+                    self.bitboard['wR'] &= ~(1 << 0)
+                    self.bitboard['wR'] |= (1 << 3)
+                else:
+                    self.bitboard['bR'] &= ~(1 << 56)
+                    self.bitboard['bR'] |= (1 << 59)
+            else:
+                # Set the to square
+                self.bitboard[moving_piece] |= (1 << move.to_square)
+                # Handle promotions
+                if move.special_move == Move.PROMOTION:
+                    promotion_piece = ['wN', 'wB', 'wR', 'wQ'][move.promotion_piece] if self.whiteToMove else ['bN', 'bB', 'bR', 'bQ'][move.promotion_piece]
+                    self.bitboard[promotion_piece] |= (1 << move.to_square)
+                    self.bitboard[moving_piece] &= ~(1 << move.to_square)
+            
             # Update the empty bitboard
             self.bitboard["empty"] |= (1 << move.from_square)  # Mark the 'from' square as empty
             self.bitboard["empty"] &= ~(1 << move.to_square)  # Mark the 'to' square as not empty
 
             # Toggle the turn
             self.whiteToMove = not self.whiteToMove
-            # Add the move to the log (optional)
-            self.moveLog.append(move)
+
+            self.bitboard["empty"] = ~(empt)
+            # Add the move to the log, including information about the captured piece (if any)
+            self.moveLog.append((move, captured_piece))
+
+    def unmakeMove(self, move):
+        # Find which piece is moving
+        moving_piece = None
+        for piece, bitboard in self.bitboard.items():
+            if piece != 'empty' and (bitboard & (1 << move.to_square)):
+                moving_piece = piece
+                break
+
+        if moving_piece:
+            # Clear the to square
+            self.bitboard[moving_piece] &= ~(1 << move.to_square)
+            # Restore any piece that might have been captured at the destination square
+            if self.moveLog:
+                _, captured_piece = self.moveLog.pop()
+                if captured_piece:
+                    self.bitboard[captured_piece] |= (1 << move.to_square)
+            
+            # Handle castling
+            if move.special_move == Move.CASTLE_KINGSIDE:
+                if self.whiteToMove:
+                    self.bitboard['wR'] &= ~(1 << 5)
+                    self.bitboard['wR'] |= (1 << 7)
+                else:
+                    self.bitboard['bR'] &= ~(1 << 61)
+                    self.bitboard['bR'] |= (1 << 63)
+            elif move.special_move == Move.CASTLE_QUEENSIDE:
+                if self.whiteToMove:
+                    self.bitboard['wR'] &= ~(1 << 3)
+                    self.bitboard['wR'] |= (1 << 0)
+                else:
+                    self.bitboard['bR'] &= ~(1 << 59)
+                    self.bitboard['bR'] |= (1 << 56)
+            else:
+                # Set the from square
+                self.bitboard[moving_piece] |= (1 << move.from_square)
+            
+            # Update the empty bitboard
+            self.bitboard["empty"] |= (1 << move.to_square)  # Mark the 'to' square as empty
+            self.bitboard["empty"] &= ~(1 << move.from_square)  # Mark the 'from' square as not empty
+
+            # Toggle the turn back
+            self.whiteToMove = not self.whiteToMove
 
 
+
+
+
+
+
+    #Move generation
     
     def generateValidMoves(self):
         moves = []
@@ -103,30 +181,32 @@ class GameState:
             for piece in whitePieces:
                 if piece == 'wp':
                     moves.extend(self.getPawnMoves())
-                # elif piece == 'wR':
-                #     moves.extend(self.getRookMoves())
+                elif piece == 'wR':
+                    moves.extend(self.getRookMoves())
                 elif piece == 'wN':
                     moves.extend(self.getKnightMoves())
-                # elif piece == 'wB':
-                #     moves.extend(self.getBishopMoves())
-                # elif piece == 'wQ':
-                #     moves.extend(self.getQueenMoves())
-                # elif piece == 'wK':
-                #     moves.extend(self.getKingMoves())
+                elif piece == 'wB':
+                    moves.extend(self.getBishopMoves())
+                elif piece == 'wQ':
+                    moves.extend(self.getQueenMoves())
+                elif piece == 'wK':
+                    moves.extend(self.getKingMoves())
+                    moves.extend(self.getCastlingMoves())
         else:
             for piece in blackPieces:
                 if piece == 'bp':
                     moves.extend(self.getPawnMoves())
-                # elif piece == 'bR':
-                #     moves.extend(self.getRookMoves())
+                elif piece == 'bR':
+                    moves.extend(self.getRookMoves())
                 elif piece == 'bN':
                     moves.extend(self.getKnightMoves())
-                # elif piece == 'bB':
-                #     moves.extend(self.getBishopMoves())
-                # elif piece == 'bQ':
-                #     moves.extend(self.getQueenMoves())
-                # elif piece == 'bK':
-                #     moves.extend(self.getKingMoves())
+                elif piece == 'bB':
+                    moves.extend(self.getBishopMoves())
+                elif piece == 'bQ':
+                    moves.extend(self.getQueenMoves())
+                elif piece == 'bK':
+                    moves.extend(self.getKingMoves())
+                    moves.extend(self.getCastlingMoves())
 
         return moves
     
@@ -173,6 +253,8 @@ class GameState:
             while move_bitboard:
                 to_square, move_bitboard = self.popLSB(move_bitboard)
                 from_square = to_square - shift
+                if shift == -7 or shift == 7 or shift == 9 or shift == -9:
+                    self.attackedSquares.add(to_square)
                 if (56 <= to_square <= 63):
                     moves.append(Move(from_square, to_square, promotion_piece= Move.KNIGHT, special_move= Move.PROMOTION))
                     moves.append(Move(from_square, to_square, promotion_piece= Move.BISHOP, special_move= Move.PROMOTION))
@@ -204,7 +286,8 @@ class GameState:
                     nx, ny = x + dx, y + dy
                     if 0 <= nx < 8 and 0 <= ny < 8:
                         target_square = nx * 8 + ny
-                        if not (1 << target_square) & own_pieces:  
+                        if not (1 << target_square) & own_pieces: 
+                            self.attackedSquares.add(target_square) 
                             moves.append(Move(square, target_square))
 
         return moves
@@ -215,7 +298,10 @@ class GameState:
                     self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if self.whiteToMove else \
                     self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
                     self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
-        opponent_pieces = ~own_pieces
+        opponent_pieces = self.bitboard['wp'] | self.bitboard['wR'] | self.bitboard['wN'] | \
+                    self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if not self.whiteToMove else \
+                    self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
+                    self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
 
         moves = []
         directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
@@ -230,6 +316,7 @@ class GameState:
                         if own_pieces & (1 << target_square):
                             break
                         moves.append(Move(square, target_square))
+                        self.attackedSquares.add(target_square)
                         if opponent_pieces & (1 << target_square):
                             break
                         nx += dx
@@ -243,7 +330,10 @@ class GameState:
                     self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if self.whiteToMove else \
                     self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
                     self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
-        opponent_pieces = ~own_pieces
+        opponent_pieces = self.bitboard['wp'] | self.bitboard['wR'] | self.bitboard['wN'] | \
+                    self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if not self.whiteToMove else \
+                    self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
+                    self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
 
         moves = []
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
@@ -258,6 +348,7 @@ class GameState:
                         if own_pieces & (1 << target_square):
                             break
                         moves.append(Move(square, target_square))
+                        self.attackedSquares.add(target_square)
                         if opponent_pieces & (1 << target_square):
                             break
                         nx += dx
@@ -269,7 +360,10 @@ class GameState:
                     self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if self.whiteToMove else \
                     self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
                     self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
-        opponent_pieces = ~own_pieces
+        opponent_pieces = self.bitboard['wp'] | self.bitboard['wR'] | self.bitboard['wN'] | \
+                    self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if not self.whiteToMove else \
+                    self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
+                    self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
 
         moves = []
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1),  # Rook directions
@@ -285,6 +379,7 @@ class GameState:
                         if own_pieces & (1 << target_square):
                             break
                         moves.append(Move(square, target_square))
+                        self.attackedSquares.add(target_square)
                         if opponent_pieces & (1 << target_square):
                             break
                         nx += dx
@@ -296,6 +391,7 @@ class GameState:
                     self.bitboard['wB'] | self.bitboard['wQ'] | self.bitboard['wK'] if self.whiteToMove else \
                     self.bitboard['bp'] | self.bitboard['bR'] | self.bitboard['bN'] | \
                     self.bitboard['bB'] | self.bitboard['bQ'] | self.bitboard['bK']
+                    
 
         moves = []
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1),  # Horizontal and vertical
@@ -310,43 +406,47 @@ class GameState:
                         target_square = nx * 8 + ny
                         if not (own_pieces & (1 << target_square)):
                             moves.append(Move(square, target_square))
+                            self.attackedSquares.add(target_square)
         return moves
 
 
+
+    #Castling Determining
 
 
     def can_castle_kingside(self):
         if self.whiteToMove:
             king_position = 3
             rook_position = 0
-            clear_path = 0x0000000000000006  # Bits that must be clear between the Rook at H1 and King at E1
+            clear_path = 0x0000000000000060  # Bits that must be clear between the Rook at H1 and King at E1
         else:
             king_position = 59
             rook_position = 56
             clear_path = 0x0600000000000000  # Bits that must be clear between the Rook at H8 and King at E8
 
         if self.moveLog:  # Check if the king or rook has moved or captured
-            moved_positions = {pos for move in self.moveLog for pos in (move.from_square, move.to_square)}
+            moved_positions = {pos for move, _ in self.moveLog for pos in (move.from_square, move.to_square)}
             if king_position in moved_positions or rook_position in moved_positions:
                 return False
-
+        print(clear_path)
         # Check if the squares between the king and rook are empty
         if self.bitboard['empty'] & clear_path == clear_path:
             return True
         return False
+
 
     def can_castle_queenside(self):
         if self.whiteToMove:
-            king_position = 3
-            rook_position = 7
-            clear_path = 0x0000000000000070  # Bits that must be clear between the Rook at A1 and King at E1
+            king_position = 4
+            rook_position = 0
+            clear_path = 0x000000000000000E  # Bits that must be clear between the Rook at A1 and King at E1
         else:
-            king_position = 59
+            king_position = 60
             rook_position = 56
-            clear_path = 0x7000000000000000  # Bits that must be clear between the Rook at A8 and King at E8
+            clear_path = 0x0E00000000000000  # Bits that must be clear between the Rook at A8 and King at E8
 
         if self.moveLog:  # Check if the king or rook has moved or captured
-            moved_positions = {pos for move in self.moveLog for pos in (move.from_square, move.to_square)}
+            moved_positions = {pos for move, _ in self.moveLog for pos in (move.from_square, move.to_square)}
             if king_position in moved_positions or rook_position in moved_positions:
                 return False
 
@@ -354,18 +454,22 @@ class GameState:
         if self.bitboard['empty'] & clear_path == clear_path:
             return True
         return False
+
     
-    def get_castling_moves(self, moves):
+    def getCastlingMoves(self):
+        moves = []
+        print(self.can_castle_kingside())
         if self.can_castle_kingside():
             if self.whiteToMove:
-                moves.append(Move(3, 1, special_move=Move.CASTLE_KINGSIDE))  # E1 to G1 for white
+                moves.append(Move(4, 6, special_move=Move.CASTLE_KINGSIDE))  # E1 to G1 for white
             else:
-                moves.append(Move(59, 57, special_move=Move.CASTLE_KINGSIDE))  # E8 to G8 for black
+                moves.append(Move(60, 62, special_move=Move.CASTLE_KINGSIDE))  # E8 to G8 for black
         if self.can_castle_queenside():
             if self.whiteToMove:
-                moves.append(Move(3, 5, special_move=Move.CASTLE_QUEENSIDE))  # E1 to C1 for white
+                moves.append(Move(4, 2, special_move=Move.CASTLE_QUEENSIDE))  # E1 to C1 for white
             else:
-                moves.append(Move(59, 57, special_move=Move.CASTLE_QUEENSIDE))  # E8 to C8 for black
+                moves.append(Move(60, 58, special_move=Move.CASTLE_QUEENSIDE))  # E8 to C8 for black
+        return moves
 
 
 
@@ -422,5 +526,42 @@ class Move:
 
 
 gs = GameState()
+
+gs.printBitboard()
+print("")
+whiteMoves = gs.generateValidMoves()
+
+gs.makeMove(whiteMoves[3])
+print("")
+gs.printBitboard()
+
+blackMoves = gs.generateValidMoves()
+gs.makeMove(blackMoves[3])
+print("")
+
+gs.printBitboard()
+
+bishMoves = gs.getBishopMoves()
+
+
+gs.makeMove(bishMoves[3])
+
+gs.printBitboard()
+
+secondBlackMove = gs.generateValidMoves()
+
+gs.makeMove(secondBlackMove[0])
+
+gs.printBitboard()
+
+knightMoves = gs.getKnightMoves()
+
+gs.makeMove(knightMoves[0])
+
+gs.makeMove(gs.generateValidMoves()[0])
+
+gs.printBitboard()
+
+print(gs.getCastlingMoves()[0])
 
 
