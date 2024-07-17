@@ -14,17 +14,25 @@ def loadImages():
         IMAGES[piece] = p.transform.scale(p.image.load("images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
 
 def main():
+    #initialize pygame
     p.init()
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
+
+    #get the game state
     gs = GameState()
     valid_moves = gs.generateValidMoves()
+
+
+    #set basic starting variables
     moveMade = False
     loadImages()
     running = True
     sqSelected = None
     playerClicks = []
+
+
 
     while running:
         for e in p.event.get():
@@ -50,7 +58,7 @@ def main():
                                 playerClicks = []
                                 valid_moves = gs.generateValidMoves()
                             else:
-                                playerClicks = [sqSelected]  # Allow reselection
+                                playerClicks = []  # Allow reselection
                 else:
                     print("Invalid click location")
 
@@ -67,7 +75,7 @@ def drawGameState(screen, gs):
     drawPieces(screen, gs)
 
 def drawBoard(screen):
-    colors = [p.Color("white"), p.Color("gray")]
+    colors = [p.Color("white"), p.Color("green")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             color = colors[(r + c) % 2]
