@@ -41,8 +41,8 @@ def main():
             elif e.type == p.MOUSEBUTTONDOWN:
                 location = p.mouse.get_pos()
                 col = location[0] // SQ_SIZE
-                row = 7 - (location[1] // SQ_SIZE)
-                clicked_square = row * 8 + col
+                row = location[1] // SQ_SIZE
+                clicked_square = (7 - row) * 8 + col  # Convert mouse coordinates to board coordinates
                 if 0 <= clicked_square < 64:  # Ensure clicked_square is valid
                     if sqSelected is None:
                         sqSelected = clicked_square
@@ -79,7 +79,7 @@ def drawBoard(screen):
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             color = colors[(r + c) % 2]
-            p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, (7 - r) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 def drawPieces(screen, gs):
     for piece, bitboard in gs.bitboard.items():
@@ -88,6 +88,8 @@ def drawPieces(screen, gs):
                 if bitboard & (1 << square):
                     row = 7 - (square // 8)  # Adjust row for bottom-to-top display
                     col = square % 8
+                    if row == 7 or row == 0:  # First and last rows
+                        col = 7 - col  # Reverse the column order for the first and last rows
                     screen.blit(IMAGES[piece], p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 if __name__ == "__main__":
