@@ -1,5 +1,5 @@
 import pygame as p
-from ChessEngine import GameState, Move
+from ChessEngineNoBit import GameState, Move
 
 WIDTH = HEIGHT = 512  # Standard dimensions for the board
 DIMENSION = 8  # Chessboard is 8x8
@@ -14,25 +14,22 @@ def loadImages():
         IMAGES[piece] = p.transform.scale(p.image.load("images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
 
 def main():
-    #initialize pygame
+    # Initialize pygame
     p.init()
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
 
-    #get the game state
+    # Get the game state
     gs = GameState()
     valid_moves = gs.generateValidMoves()
 
-
-    #set basic starting variables
+    # Set basic starting variables
     moveMade = False
     loadImages()
     running = True
     sqSelected = None
     playerClicks = []
-
-
 
     while running:
         for e in p.event.get():
@@ -42,28 +39,27 @@ def main():
                 location = p.mouse.get_pos()
                 col = location[0] // SQ_SIZE
                 row = location[1] // SQ_SIZE
-                clicked_square = (7 - row) * 8 + col  # Convert mouse coordinates to board coordinates
-                if 0 <= clicked_square < 64:  # Ensure clicked_square is valid
-                    if sqSelected is None:
-                        sqSelected = clicked_square
-                        playerClicks = [sqSelected]
-                    else:
-                        playerClicks.append(clicked_square)
-                        if len(playerClicks) == 2:
-                            move = Move(playerClicks[0], playerClicks[1])
-                            if move in valid_moves:
-                                gs.makeMove(move)
-                                moveMade = True
-                                sqSelected = None
-                                playerClicks = []
-                                valid_moves = gs.generateValidMoves()
-                            else:
-                                playerClicks = []  # Allow reselection
+                if sqSelected is None:
+                    sqSelected = (row, col)
+                    playerClicks = [sqSelected]
                 else:
-                    print("Invalid click location")
+                    playerClicks.append((row, col))
+                    if len(playerClicks) == 2:
+                        from_square = (playerClicks[0][0], playerClicks[0][1])
+                        to_square = (playerClicks[1][0], playerClicks[1][1])
+                        move = Move(from_square, to_square, Move.MOVE, gs.board[from_square[0]][from_square[1]], gs.board[to_square[0]][to_square[1]])
+                        if move in valid_moves:
+                            gs.makeMove(move)
+                            moveMade = True
+                            sqSelected = None
+                            playerClicks = []
+                            valid_moves = gs.generateValidMoves()
+                        else:
+                            print("move not valid")
+                            playerClicks = []  # Allow reselection
+                            sqSelected = None
 
         if moveMade:
-            print("Switching Turn")
             moveMade = False
 
         drawGameState(screen, gs)
@@ -72,7 +68,7 @@ def main():
 
 def drawGameState(screen, gs):
     drawBoard(screen)
-    drawPieces(screen, gs)
+    drawPieces(screen, gs.board)
 
 def drawBoard(screen):
     colors = [p.Color("white"), p.Color("green")]
@@ -81,16 +77,12 @@ def drawBoard(screen):
             color = colors[(r + c) % 2]
             p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def drawPieces(screen, gs):
-    for piece, bitboard in gs.bitboard.items():
-        if piece != "empty":
-            for square in range(64):
-                if bitboard & (1 << square):
-                    row = 7 - (square // 8)  # Adjust row for bottom-to-top display
-                    col = square % 8
-                    if row == 7 or row == 0:  # First and last rows
-                        col = 7 - col  # Reverse the column order for the first and last rows
-                    screen.blit(IMAGES[piece], p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+def drawPieces(screen, board):
+    for r in range(DIMENSION):
+        for c in range(DIMENSION):
+            piece = board[r][c]
+            if piece != '..':
+                screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 if __name__ == "__main__":
     main()

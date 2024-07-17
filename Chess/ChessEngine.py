@@ -229,8 +229,8 @@ class GameState:
     
     def generateValidMoves(self):
         moves = []
-        whitePieces = ['wp','wR','wN','wB','wQ','wK']
-        blackPieces = ['bp','wR','bN','bB','bQ','bK']
+        whitePieces = ['wp', 'wR', 'wN', 'wB', 'wQ', 'wK']
+        blackPieces = ['bp', 'wR', 'bN', 'bB', 'bQ', 'bK']
 
         if self.whiteToMove:
             for piece in whitePieces:
@@ -263,7 +263,15 @@ class GameState:
                     moves.extend(self.getKingMoves())
                     moves.extend(self.getCastlingMoves())
 
-        return moves
+        # Filter out moves that leave the king in check
+        valid_moves = []
+        for move in moves:
+            self.makeMove(move)
+            if not self.isKingInCheck():
+                valid_moves.append(move)
+            self.unmakeMove(move)
+        
+        return valid_moves
     
 
     def popLSB(self, bb):
@@ -310,8 +318,10 @@ class GameState:
                 right_en_passant = (pawnBoard >> 7) & (1 << self.enPassantTarget) & ~file_h
                 if left_en_passant:
                     moves.append(Move(self.enPassantTarget + 9, self.enPassantTarget, special_move=Move.EN_PASSANT))
+                    print("ADDED EN PASSANT")
                 if right_en_passant:
                     moves.append(Move(self.enPassantTarget + 7, self.enPassantTarget, special_move=Move.EN_PASSANT))
+                    print("ADDED EN PASSANT")
 
         move_types_and_shifts = [
             (single_push, 8 if self.whiteToMove else -8),
@@ -534,13 +544,37 @@ class GameState:
             if self.whiteToMove:
                 moves.append(Move(3, 1, special_move=Move.CASTLE))  # E1 to G1 for white
             else:
-                moves.append(Move(60, 62, special_move=Move.CASTLE))  # E8 to G8 for black
+                moves.append(Move(59, 57, special_move=Move.CASTLE))  # E8 to G8 for black
         if self.can_castle_queenside():
             if self.whiteToMove:
-                moves.append(Move(4, 2, special_move=Move.CASTLE))  # E1 to C1 for white
+                moves.append(Move(3, 5, special_move=Move.CASTLE))  # E1 to C1 for white
             else:
-                moves.append(Move(60, 58, special_move=Move.CASTLE))  # E8 to C8 for black
+                moves.append(Move(59, 61, special_move=Move.CASTLE))  # E8 to C8 for black
         return moves
+    
+
+
+    def isKingInCheck(self):
+        king_pos = self.getKingPosition()
+        for move in self.getAllOpponentMoves():
+            if move.to_square == king_pos:
+                return True
+        return False
+
+    def getKingPosition(self):
+        king_bitboard = self.bitboard['wK'] if self.whiteToMove else self.bitboard['bK']
+        if king_bitboard:
+            return king_bitboard.bit_length() - 1
+        return None
+
+    def getAllOpponentMoves(self):
+        opponent_moves = []
+        self.whiteToMove = not self.whiteToMove  # Temporarily switch turns
+        opponent_moves.extend(self.generateValidMoves())
+        self.whiteToMove = not self.whiteToMove  # Switch back
+        return opponent_moves
+    
+    
     
 
 
@@ -557,6 +591,12 @@ class GameState:
             total_moves += self.perft(depth - 1)
             self.unmakeMove(move)
         return total_moves
+    
+    def test_perft(depth):
+        gs = GameState()
+        for d in range(depth + 1):
+            print(f"Perft({d}): {gs.perft(d)}")
+
 
 
 
@@ -612,3 +652,6 @@ class Move:
         return (f"Move(from {self.from_square}, to {self.to_square}, " +
                 f"promotion {self.promotion_piece}, special {self.special_move})")
 
+if __name__ == "__main__":
+    gs = GameState
+    gs.test_perft(5)  # Change the depth as needed
