@@ -22,7 +22,10 @@ class GameState:
     def makeMove(self, move):
         piece = self.board[move.from_square[0]][move.from_square[1]]
         self.board[move.from_square[0]][move.from_square[1]] = '..'
-        self.board[move.to_square[0]][move.to_square[1]] = piece
+        if move.move_type == Move.PROMOTION:
+            self.board[move.to_square[0]][move.to_square[1]] = move.promotion_piece
+        else:
+            self.board[move.to_square[0]][move.to_square[1]] = piece
 
         if move.move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
@@ -45,10 +48,13 @@ class GameState:
         self.moveLog.append(move)
         self.whiteToMove = not self.whiteToMove
 
-
     def unmakeMove(self, move):
         self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
-        self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
+        if move.move_type == Move.PROMOTION:
+            self.board[move.to_square[0]][move.to_square[1]] = '..'
+            self.board[move.from_square[0]][move.from_square[1]] = 'wp' if self.whiteToMove else 'bp'
+        else:
+            self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
 
         if move.move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
@@ -76,8 +82,6 @@ class GameState:
                 self.enPassantPossible = ()
         else:
             self.enPassantPossible = ()
-
-
 
     def generateValidMoves(self):
         moves = []
@@ -108,35 +112,57 @@ class GameState:
     def getPawnMoves(self, r, c, moves):
         if self.whiteToMove:
             if self.board[r-1][c] == '..':
-                moves.append(Move((r, c), (r-1, c), Move.MOVE, 'wp'))
-                if r == 6 and self.board[r-2][c] == '..':
-                    moves.append(Move((r, c), (r-2, c), Move.MOVE, 'wp'))
+                if r-1 == 0:
+                    self.addPromotionMoves(r, c, r-1, c, moves, 'wp')
+                else:
+                    moves.append(Move((r, c), (r-1, c), Move.MOVE, 'wp'))
+                    if r == 6 and self.board[r-2][c] == '..':
+                        moves.append(Move((r, c), (r-2, c), Move.MOVE, 'wp'))
             if c-1 >= 0:  # Capture to the left
                 if self.board[r-1][c-1][0] == 'b':
-                    moves.append(Move((r, c), (r-1, c-1), Move.CAPTURE, 'wp', self.board[r-1][c-1]))
+                    if r-1 == 0:
+                        self.addPromotionMoves(r, c, r-1, c-1, moves, 'wp', self.board[r-1][c-1])
+                    else:
+                        moves.append(Move((r, c), (r-1, c-1), Move.CAPTURE, 'wp', self.board[r-1][c-1]))
                 elif (r-1, c-1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r-1, c-1), Move.EN_PASSANT, 'wp', 'bp'))
             if c+1 <= 7:  # Capture to the right
                 if self.board[r-1][c+1][0] == 'b':
-                    moves.append(Move((r, c), (r-1, c+1), Move.CAPTURE, 'wp', self.board[r-1][c+1]))
+                    if r-1 == 0:
+                        self.addPromotionMoves(r, c, r-1, c+1, moves, 'wp', self.board[r-1][c+1])
+                    else:
+                        moves.append(Move((r, c), (r-1, c+1), Move.CAPTURE, 'wp', self.board[r-1][c+1]))
                 elif (r-1, c+1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r-1, c+1), Move.EN_PASSANT, 'wp', 'bp'))
         else:
             if self.board[r+1][c] == '..':
-                moves.append(Move((r, c), (r+1, c), Move.MOVE, 'bp'))
-                if r == 1 and self.board[r+2][c] == '..':
-                    moves.append(Move((r, c), (r+2, c), Move.MOVE, 'bp'))
+                if r+1 == 7:
+                    self.addPromotionMoves(r, c, r+1, c, moves, 'bp')
+                else:
+                    moves.append(Move((r, c), (r+1, c), Move.MOVE, 'bp'))
+                    if r == 1 and self.board[r+2][c] == '..':
+                        moves.append(Move((r, c), (r+2, c), Move.MOVE, 'bp'))
             if c-1 >= 0:  # Capture to the left
                 if self.board[r+1][c-1][0] == 'w':
-                    moves.append(Move((r, c), (r+1, c-1), Move.CAPTURE, 'bp', self.board[r+1][c-1]))
+                    if r+1 == 7:
+                        self.addPromotionMoves(r, c, r+1, c-1, moves, 'bp', self.board[r+1][c-1])
+                    else:
+                        moves.append(Move((r, c), (r+1, c-1), Move.CAPTURE, 'bp', self.board[r+1][c-1]))
                 elif (r+1, c-1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r+1, c-1), Move.EN_PASSANT, 'bp', 'wp'))
             if c+1 <= 7:  # Capture to the right
                 if self.board[r+1][c+1][0] == 'w':
-                    moves.append(Move((r, c), (r+1, c+1), Move.CAPTURE, 'bp', self.board[r+1][c+1]))
+                    if r+1 == 7:
+                        self.addPromotionMoves(r, c, r+1, c+1, moves, 'bp', self.board[r+1][c+1])
+                    else:
+                        moves.append(Move((r, c), (r+1, c+1), Move.CAPTURE, 'bp', self.board[r+1][c+1]))
                 elif (r+1, c+1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r+1, c+1), Move.EN_PASSANT, 'bp', 'wp'))
 
+    def addPromotionMoves(self, r, c, end_row, end_col, moves, piece_moved, piece_captured='..'):
+        promotion_pieces = ['Q', 'R', 'B', 'N']
+        for p in promotion_pieces:
+            moves.append(Move((r, c), (end_row, end_col), Move.PROMOTION, piece_moved, piece_captured, 'w' + p if self.whiteToMove else 'b' + p))
 
     def getRookMoves(self, r, c, moves):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -156,7 +182,6 @@ class GameState:
                 else:
                     break
 
-
     def getKnightMoves(self, r, c, moves):
         knight_moves = [
             (2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)
@@ -171,7 +196,6 @@ class GameState:
                         moves.append(Move((r, c), (end_row, end_col), Move.MOVE, self.board[r][c]))
                     else:
                         moves.append(Move((r, c), (end_row, end_col), Move.CAPTURE, self.board[r][c], end_piece))
-
 
     def getBishopMoves(self, r, c, moves):
         directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
@@ -190,7 +214,6 @@ class GameState:
                         break
                 else:
                     break
-
 
     def getQueenMoves(self, r, c, moves):
         self.getRookMoves(r, c, moves)
@@ -211,7 +234,6 @@ class GameState:
                     else:
                         moves.append(Move((r, c), (end_row, end_col), Move.CAPTURE, self.board[r][c], end_piece))
         self.getCastlingMoves(r, c, moves)
-
 
     def getCastlingMoves(self, r, c, moves):
         if self.whiteToMove:
@@ -242,11 +264,73 @@ class GameState:
                     not self.isUnderAttack((0, 2)) and not self.isUnderAttack((0, 3)) and not self.isUnderAttack((0, 4)))
 
     def isUnderAttack(self, square):
-        for move in self.generateValidMoves():
-            if move.to_square == square:
+        enemy_color = 'b' if self.whiteToMove else 'w'
+        for r in range(len(self.board)):
+            for c in range(len(self.board[r])):
+                piece = self.board[r][c]
+                if piece[0] == enemy_color:
+                    piece_type = piece[1]
+                    if piece_type == 'p':
+                        if enemy_color == 'w':  # white pawns attack diagonally up
+                            if (r-1, c-1) == square or (r-1, c+1) == square:
+                                return True
+                        else:  # black pawns attack diagonally down
+                            if (r+1, c-1) == square or (r+1, c+1) == square:
+                                return True
+                    elif piece_type == 'R':
+                        if self.rookAttacks(r, c, square):
+                            return True
+                    elif piece_type == 'N':
+                        if self.knightAttacks(r, c, square):
+                            return True
+                    elif piece_type == 'B':
+                        if self.bishopAttacks(r, c, square):
+                            return True
+                    elif piece_type == 'Q':
+                        if self.rookAttacks(r, c, square) or self.bishopAttacks(r, c, square):
+                            return True
+                    elif piece_type == 'K':
+                        if abs(r - square[0]) <= 1 and abs(c - square[1]) <= 1:
+                            return True
+        return False
+
+
+    def rookAttacks(self, r, c, square):
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for d in directions:
+            for i in range(1, 8):
+                end_row, end_col = r + d[0] * i, c + d[1] * i
+                if (end_row, end_col) == square:
+                    return True
+                if 0 <= end_row < 8 and 0 <= end_col < 8:
+                    if self.board[end_row][end_col] != '..':
+                        break
+                else:
+                    break
+        return False
+
+    def knightAttacks(self, r, c, square):
+        knight_moves = [
+            (2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)
+        ]
+        for m in knight_moves:
+            if (r + m[0], c + m[1]) == square:
                 return True
         return False
-    
+
+    def bishopAttacks(self, r, c, square):
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        for d in directions:
+            for i in range(1, 8):
+                end_row, end_col = r + d[0] * i, c + d[1] * i
+                if (end_row, end_col) == square:
+                    return True
+                if 0 <= end_row < 8 and 0 <= end_col < 8:
+                    if self.board[end_row][end_col] != '..':
+                        break
+                else:
+                    break
+        return False
 
     def countPositions(self, depth):
         if depth == 0:
@@ -290,7 +374,3 @@ class Move:
                 f"type {self.move_type}, moved {self.piece_moved}, " +
                 f"captured {self.piece_captured}, promotion {self.promotion_piece})")
 
-
-gs = GameState()
-
-print(gs.countPositions(6))

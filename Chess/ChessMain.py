@@ -26,6 +26,7 @@ def main():
 
     # Set basic starting variables
     moveMade = False
+    promotionMove = None
     loadImages()
     running = True
     sqSelected = None
@@ -39,7 +40,11 @@ def main():
                 location = p.mouse.get_pos()
                 col = location[0] // SQ_SIZE
                 row = location[1] // SQ_SIZE
-                if sqSelected is None:
+                if promotionMove:
+                    handlePromotionSelection(gs, promotionMove, row, col)
+                    promotionMove = None
+                    moveMade = True
+                elif sqSelected is None:
                     sqSelected = (row, col)
                     playerClicks = [sqSelected]
                 else:
@@ -49,8 +54,11 @@ def main():
                         to_square = (playerClicks[1][0], playerClicks[1][1])
                         move = Move(from_square, to_square, Move.MOVE, gs.board[from_square[0]][from_square[1]], gs.board[to_square[0]][to_square[1]])
                         if move in valid_moves:
-                            gs.makeMove(move)
-                            moveMade = True
+                            if isPromotionMove(move):
+                                promotionMove = move
+                            else:
+                                gs.makeMove(move)
+                                moveMade = True
                             sqSelected = None
                             playerClicks = []
                             valid_moves = gs.generateValidMoves()
@@ -63,6 +71,8 @@ def main():
             moveMade = False
 
         drawGameState(screen, gs)
+        if promotionMove:
+            drawPromotionOptions(screen, promotionMove.to_square[1], gs.whiteToMove)
         clock.tick(MAX_FPS)
         p.display.flip()
 
@@ -83,6 +93,26 @@ def drawPieces(screen, board):
             piece = board[r][c]
             if piece != '..':
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def drawPromotionOptions(screen, col, whiteToMove):
+    pieces = ['Q', 'R', 'B', 'N']
+    color = 'w' if whiteToMove else 'b'
+    for i, piece in enumerate(pieces):
+        screen.blit(IMAGES[color + piece], p.Rect(col * SQ_SIZE, i * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def handlePromotionSelection(gs, move, row, col):
+    pieces = ['Q', 'R', 'B', 'N']
+    if 0 <= row < 4:
+        promotion_piece = pieces[row]
+        move.promotion_piece = 'w' + promotion_piece if gs.whiteToMove else 'b' + promotion_piece
+        gs.makeMove(move)
+
+def isPromotionMove(move):
+    if move.piece_moved == 'wp' and move.to_square[0] == 0:
+        return True
+    if move.piece_moved == 'bp' and move.to_square[0] == 7:
+        return True
+    return False
 
 if __name__ == "__main__":
     main()
