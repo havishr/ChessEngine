@@ -370,7 +370,10 @@ class Move:
                 self.promotion_piece == other.promotion_piece)
 
     def __repr__(self):
-        return (f"Move(from {self.from_square}, to {self.to_square}, " +
-                f"type {self.move_type}, moved {self.piece_moved}, " +
-                f"captured {self.piece_captured}, promotion {self.promotion_piece})")
+        return (f"(Move(from {self.from_square}, to {self.to_square}, " +
+                f"Move Type: {self.move_type} Moved: {self.piece_moved}, " +
+                f"Captured Piece: {self.piece_captured}, Promotion Piece: {self.promotion_piece}))")
 
+gs = GameState()
+
+print(gs.countPositions(6))
