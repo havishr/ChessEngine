@@ -97,7 +97,7 @@ def main():
                             sqSelected = None
         if moveMade:
             moveMade = False
-
+        
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
         p.display.flip()
@@ -138,6 +138,22 @@ def selectPromotionPiece(whiteToMove):
                 selected_row = location[1] // 50
                 if 0 <= selected_row < 4:
                     return pieces[selected_row]
+def get_best_move(gs, valid_moves):
+        best_move = None
+        best_score = -float('inf') if gs.whiteToMove else float('inf')
+        for move in valid_moves:
+            gs.makeMove(move)
+            score = gs.evaluate_board()
+            gs.unmakeMove(move)
+            if gs.whiteToMove:
+                if score > best_score:
+                    best_score = score
+                    best_move = move
+            else:
+                if score < best_score:
+                    best_score = score
+                    best_move = move
+        return best_move
 
 
 if __name__ == "__main__":
