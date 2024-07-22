@@ -26,74 +26,54 @@ class GameState:
 
 
     #MOVE MAKING AND UNMAKING
-            
-
     def makeMove(self, move):
-
-        #Get the piece and set the starting position to empty
-        piece = move.piece_moved
+        piece = self.board[move.from_square[0]][move.from_square[1]]
         self.board[move.from_square[0]][move.from_square[1]] = '..'
-
-        move_type = move.move_type
-
-        #If its a promotion, set the ending piece to the promotion piece
-        if move_type == Move.PROMOTION:
+        if move.move_type == Move.PROMOTION:
             self.board[move.to_square[0]][move.to_square[1]] = move.promotion_piece
         else:
             self.board[move.to_square[0]][move.to_square[1]] = piece
 
-
-        #Adjust the new King Positions
         if piece == 'wK':
             self.whiteKingLocation = move.to_square
         elif piece == 'bK':
             self.blackKingLocation = move.to_square
 
-
-        #Make the rook move if it is castled
-        if move_type == Move.CASTLE_KINGSIDE:
+        if move.move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
                 self.board[7][5], self.board[7][7] = self.board[7][7], '..'
             else:
                 self.board[0][5], self.board[0][7] = self.board[0][7], '..'
-        elif move_type == Move.CASTLE_QUEENSIDE:
+        elif move.move_type == Move.CASTLE_QUEENSIDE:
             if self.whiteToMove:
                 self.board[7][3], self.board[7][0] = self.board[7][0], '..'
             else:
                 self.board[0][3], self.board[0][0] = self.board[0][0], '..'
-
-        #Set the captured pawn to empty in the case of en passant
-        elif move_type == Move.EN_PASSANT:
+        elif move.move_type == Move.EN_PASSANT:
             self.board[move.from_square[0]][move.to_square[1]] = '..'  # Remove the captured pawn
-
-        #If a pawn was pushed twice, adjust the enPassant possible, otherwise set it to empty
         elif abs(move.to_square[0] - move.from_square[0]) == 2 and piece[1] == 'p':
             # Set enPassantPossible if a pawn moved two squares
             self.enPassantPossible = ((move.from_square[0] + move.to_square[0]) // 2, move.from_square[1])
         else:
             self.enPassantPossible = ()
 
-
-        #Add the move to the move log
         self.moveLog.append(move)
-
-        #Switch the turn
         self.whiteToMove = not self.whiteToMove
-    
+        self.printBoard()
 
     def unmakeMove(self, move):
-
-        #set the move's starting square to the piece and to square to the piece captured
         self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
-        self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
+        if move.move_type == Move.PROMOTION:
+            self.board[move.to_square[0]][move.to_square[1]] = '..'
+            self.board[move.from_square[0]][move.from_square[1]] = 'wp' if self.whiteToMove else 'bp'
+        else:
+            self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
 
-        #reset the king positions if they moved
         if move.piece_moved == 'wK':
             self.whiteKingLocation = move.from_square
         elif move.piece_moved == 'bK':
             self.blackKingLocation = move.from_square
 
-        #reset the rook positions when they castle
         if move.move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
                 self.board[7][5], self.board[7][7] = '..', 'wR'
@@ -104,36 +84,21 @@ class GameState:
                 self.board[7][3], self.board[7][0] = '..', 'wR'
             else:
                 self.board[0][3], self.board[0][0] = '..', 'bR'
-
-
-        #reset the en passant position
         elif move.move_type == Move.EN_PASSANT:
             self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
             self.board[move.to_square[0]][move.to_square[1]] = '..'
             self.board[move.from_square[0]][move.to_square[1]] = move.piece_captured  # Restore the captured pawn
 
-
-        #pop the move from the log
         self.moveLog.pop()
-
-        #switch turns
         self.whiteToMove = not self.whiteToMove
-
-
-
-
         # Reset enPassantPossible to the state before the move
         if self.moveLog:
-            #get the last move
             lastMove = self.moveLog[-1]
-            #if the last move was a pawn move of push two, reset the en passant possible to that
             if lastMove.move_type == Move.MOVE and abs(lastMove.to_square[0] - lastMove.from_square[0]) == 2 and lastMove.piece_moved[1] == 'p':
                 self.enPassantPossible = ((lastMove.from_square[0] + lastMove.to_square[0]) // 2, lastMove.from_square[1])
             else:
-                #otherwise make it blank
                 self.enPassantPossible = ()
         else:
-            #make it blank if there is no move log meaning its the first move
             self.enPassantPossible = ()
 
 
@@ -171,14 +136,9 @@ class GameState:
 
     def generateValidMoves(self):
         moves = []
-
-        #iterate through the whole board
         for r in range(len(self.board)):
             for c in range(len(self.board[r])):
-                #for each position, get the piece
                 piece = self.board[r][c]
-
-                #if its not blank, get the turn and if it matches the first letter of the piece, get the moves for that piece
                 if piece != '..':
                     color = 'w' if self.whiteToMove else 'b'
                     if piece[0] == color:
@@ -644,21 +604,6 @@ class GameState:
                 beta = min(beta, score)
 
         return best_move
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
