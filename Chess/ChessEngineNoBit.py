@@ -26,54 +26,74 @@ class GameState:
 
 
     #MOVE MAKING AND UNMAKING
+            
+
     def makeMove(self, move):
-        piece = self.board[move.from_square[0]][move.from_square[1]]
+
+        #Get the piece and set the starting position to empty
+        piece = move.piece_moved
         self.board[move.from_square[0]][move.from_square[1]] = '..'
-        if move.move_type == Move.PROMOTION:
+
+        move_type = move.move_type
+
+        #If its a promotion, set the ending piece to the promotion piece
+        if move_type == Move.PROMOTION:
             self.board[move.to_square[0]][move.to_square[1]] = move.promotion_piece
         else:
             self.board[move.to_square[0]][move.to_square[1]] = piece
 
+
+        #Adjust the new King Positions
         if piece == 'wK':
             self.whiteKingLocation = move.to_square
         elif piece == 'bK':
             self.blackKingLocation = move.to_square
 
-        if move.move_type == Move.CASTLE_KINGSIDE:
+
+        #Make the rook move if it is castled
+        if move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
                 self.board[7][5], self.board[7][7] = self.board[7][7], '..'
             else:
                 self.board[0][5], self.board[0][7] = self.board[0][7], '..'
-        elif move.move_type == Move.CASTLE_QUEENSIDE:
+        elif move_type == Move.CASTLE_QUEENSIDE:
             if self.whiteToMove:
                 self.board[7][3], self.board[7][0] = self.board[7][0], '..'
             else:
                 self.board[0][3], self.board[0][0] = self.board[0][0], '..'
-        elif move.move_type == Move.EN_PASSANT:
+
+        #Set the captured pawn to empty in the case of en passant
+        elif move_type == Move.EN_PASSANT:
             self.board[move.from_square[0]][move.to_square[1]] = '..'  # Remove the captured pawn
+
+        #If a pawn was pushed twice, adjust the enPassant possible, otherwise set it to empty
         elif abs(move.to_square[0] - move.from_square[0]) == 2 and piece[1] == 'p':
             # Set enPassantPossible if a pawn moved two squares
             self.enPassantPossible = ((move.from_square[0] + move.to_square[0]) // 2, move.from_square[1])
         else:
             self.enPassantPossible = ()
 
+
+        #Add the move to the move log
         self.moveLog.append(move)
+
+        #Switch the turn
         self.whiteToMove = not self.whiteToMove
-        self.printBoard()
+    
 
     def unmakeMove(self, move):
-        self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
-        if move.move_type == Move.PROMOTION:
-            self.board[move.to_square[0]][move.to_square[1]] = '..'
-            self.board[move.from_square[0]][move.from_square[1]] = 'wp' if self.whiteToMove else 'bp'
-        else:
-            self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
 
+        #set the move's starting square to the piece and to square to the piece captured
+        self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
+        self.board[move.to_square[0]][move.to_square[1]] = move.piece_captured
+
+        #reset the king positions if they moved
         if move.piece_moved == 'wK':
             self.whiteKingLocation = move.from_square
         elif move.piece_moved == 'bK':
             self.blackKingLocation = move.from_square
 
+        #reset the rook positions when they castle
         if move.move_type == Move.CASTLE_KINGSIDE:
             if self.whiteToMove:
                 self.board[7][5], self.board[7][7] = '..', 'wR'
@@ -84,21 +104,36 @@ class GameState:
                 self.board[7][3], self.board[7][0] = '..', 'wR'
             else:
                 self.board[0][3], self.board[0][0] = '..', 'bR'
+
+
+        #reset the en passant position
         elif move.move_type == Move.EN_PASSANT:
             self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
             self.board[move.to_square[0]][move.to_square[1]] = '..'
             self.board[move.from_square[0]][move.to_square[1]] = move.piece_captured  # Restore the captured pawn
 
+
+        #pop the move from the log
         self.moveLog.pop()
+
+        #switch turns
         self.whiteToMove = not self.whiteToMove
+
+
+
+
         # Reset enPassantPossible to the state before the move
         if self.moveLog:
+            #get the last move
             lastMove = self.moveLog[-1]
+            #if the last move was a pawn move of push two, reset the en passant possible to that
             if lastMove.move_type == Move.MOVE and abs(lastMove.to_square[0] - lastMove.from_square[0]) == 2 and lastMove.piece_moved[1] == 'p':
                 self.enPassantPossible = ((lastMove.from_square[0] + lastMove.to_square[0]) // 2, lastMove.from_square[1])
             else:
+                #otherwise make it blank
                 self.enPassantPossible = ()
         else:
+            #make it blank if there is no move log meaning its the first move
             self.enPassantPossible = ()
 
 
@@ -136,24 +171,32 @@ class GameState:
 
     def generateValidMoves(self):
         moves = []
+
+        #iterate through the whole board
         for r in range(len(self.board)):
             for c in range(len(self.board[r])):
+                #for each position, get the piece
                 piece = self.board[r][c]
+
+                #if its not blank, get the turn and if it matches the first letter of the piece, get the moves for that piece
                 if piece != '..':
                     color = 'w' if self.whiteToMove else 'b'
                     if piece[0] == color:
+                        
                         self.getPieceMoves(r, c, moves)
         # Filter out moves that place the king in check
         valid_moves = []
         for move in moves:
+            #Makes move and checks if the king is under attack after that
             self.makeMove(move)
-            self.whiteToMove = not self.whiteToMove
             if not self.isInCheck():
+
                 valid_moves.append(move)
-            self.whiteToMove = not self.whiteToMove
             self.unmakeMove(move)
         return valid_moves
     
+
+    #Checks the row and column takes the position and gets the moves for the row/column
     def getPieceMoves(self, r, c, moves):
         piece = self.board[r][c][1]
         if piece == 'p':
@@ -173,15 +216,22 @@ class GameState:
 
 
 
-
+    #Gets the king position and checks if the king is attacked
     def isInCheck(self):
+        #Flip the moves because make and unmake moves change turn
+        self.whiteToMove = not self.whiteToMove
         king_pos = self.whiteKingLocation if self.whiteToMove else self.blackKingLocation
-        return self.isUnderAttack(king_pos)
+        inCheck = self.isUnderAttack(king_pos)
+        self.whiteToMove = not self.whiteToMove
+        return inCheck
 
+
+    #Checks if a square is under attack
     def isUnderAttack(self, square):
         enemy_color = 'b' if self.whiteToMove else 'w'
         for r in range(len(self.board)):
             for c in range(len(self.board[r])):
+                #Iterate through each square and if the piece is the color of the opponent, generate their attacks
                 piece = self.board[r][c]
                 if piece[0] == enemy_color:
                     piece_type = piece[1]
@@ -207,14 +257,18 @@ class GameState:
                     elif piece_type == 'K':
                         if abs(r - square[0]) <= 1 and abs(c - square[1]) <= 1:
                             return True
+        #If not attacked return false
         return False
 
 
 
 
+    #Checking rook, knight, and bishop attacks
 
     def rookAttacks(self, r, c, square):
+        #Get the move offsets
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        #Iterates through all directions and if the square is equal to the target square or out of bounds it returns
         for d in directions:
             for i in range(1, 8):
                 end_row, end_col = r + d[0] * i, c + d[1] * i
@@ -227,6 +281,7 @@ class GameState:
                     break
         return False
 
+    #Checks all offsets for the knight for legal moves
     def knightAttacks(self, r, c, square):
         knight_moves = [
             (2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)
@@ -236,6 +291,7 @@ class GameState:
                 return True
         return False
 
+    #Check the same thing with the rook with different offsets
     def bishopAttacks(self, r, c, square):
         directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         for d in directions:
@@ -261,22 +317,29 @@ class GameState:
 
     #GETTING ALL INDIVIDUAL PIECE MOVES
     def getPawnMoves(self, r, c, moves):
+
         if self.whiteToMove:
+            #If the square above is empty, add the promotion if its at the end of the board or add the one pawn push
             if self.board[r-1][c] == '..':
                 if r-1 == 0:
                     self.addPromotionMoves(r, c, r-1, c, moves, 'wp')
                 else:
                     moves.append(Move((r, c), (r-1, c), Move.MOVE, 'wp'))
+                    #If after one push its on rank 6 and the one above is empty, add the double push
                     if r == 6 and self.board[r-2][c] == '..':
                         moves.append(Move((r, c), (r-2, c), Move.MOVE, 'wp'))
+            
+            #Check the bounds for capture and then do the same thing with one pawn push(If at 0, add promotion, otherwise just add the capture)
             if c-1 >= 0:  # Capture to the left
                 if self.board[r-1][c-1][0] == 'b':
                     if r-1 == 0:
                         self.addPromotionMoves(r, c, r-1, c-1, moves, 'wp', self.board[r-1][c-1])
                     else:
                         moves.append(Move((r, c), (r-1, c-1), Move.CAPTURE, 'wp', self.board[r-1][c-1]))
+                #If the left square is the enPassant square, add that move
                 elif (r-1, c-1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r-1, c-1), Move.EN_PASSANT, 'wp', 'bp'))
+            #Repeat everything to the right
             if c+1 <= 7:  # Capture to the right
                 if self.board[r-1][c+1][0] == 'b':
                     if r-1 == 0:
@@ -286,6 +349,7 @@ class GameState:
                 elif (r-1, c+1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r-1, c+1), Move.EN_PASSANT, 'wp', 'bp'))
         else:
+            #Do the same thing but for black
             if self.board[r+1][c] == '..':
                 if r+1 == 7:
                     self.addPromotionMoves(r, c, r+1, c, moves, 'bp')
@@ -293,7 +357,7 @@ class GameState:
                     moves.append(Move((r, c), (r+1, c), Move.MOVE, 'bp'))
                     if r == 1 and self.board[r+2][c] == '..':
                         moves.append(Move((r, c), (r+2, c), Move.MOVE, 'bp'))
-            if c-1 >= 0:  # Capture to the left
+            if c-1 >= 0:  # Capture to the right
                 if self.board[r+1][c-1][0] == 'w':
                     if r+1 == 7:
                         self.addPromotionMoves(r, c, r+1, c-1, moves, 'bp', self.board[r+1][c-1])
@@ -301,7 +365,7 @@ class GameState:
                         moves.append(Move((r, c), (r+1, c-1), Move.CAPTURE, 'bp', self.board[r+1][c-1]))
                 elif (r+1, c-1) == self.enPassantPossible:
                     moves.append(Move((r, c), (r+1, c-1), Move.EN_PASSANT, 'bp', 'wp'))
-            if c+1 <= 7:  # Capture to the right
+            if c+1 <= 7:  # Capture to the left
                 if self.board[r+1][c+1][0] == 'w':
                     if r+1 == 7:
                         self.addPromotionMoves(r, c, r+1, c+1, moves, 'bp', self.board[r+1][c+1])
@@ -311,10 +375,12 @@ class GameState:
                     moves.append(Move((r, c), (r+1, c+1), Move.EN_PASSANT, 'bp', 'wp'))
 
     def addPromotionMoves(self, r, c, end_row, end_col, moves, piece_moved, piece_captured='..'):
+        #If a move is a promotion, add all the possible piece selections when reaching the end
         promotion_pieces = ['Q', 'R', 'B', 'N']
         for p in promotion_pieces:
             moves.append(Move((r, c), (end_row, end_col), Move.PROMOTION, piece_moved, piece_captured, 'w' + p if self.whiteToMove else 'b' + p))
 
+    #Same as getting the rook attacks, but adding the moves and captures instead
     def getRookMoves(self, r, c, moves):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         enemy_color = 'b' if self.whiteToMove else 'w'
@@ -333,6 +399,7 @@ class GameState:
                 else:
                     break
 
+    #Same thing as getting the knight attacks, but adding the moves
     def getKnightMoves(self, r, c, moves):
         knight_moves = [
             (2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)
@@ -348,6 +415,7 @@ class GameState:
                     else:
                         moves.append(Move((r, c), (end_row, end_col), Move.CAPTURE, self.board[r][c], end_piece))
 
+    #Same thing as getting the bishop moves, but instead adding the moves
     def getBishopMoves(self, r, c, moves):
         directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         enemy_color = 'b' if self.whiteToMove else 'w'
@@ -364,10 +432,13 @@ class GameState:
                     else:
                         break
 
+    #Queen moves are a combination of the sliding sideways and diagonal moves
     def getQueenMoves(self, r, c, moves):
         self.getRookMoves(r, c, moves)
         self.getBishopMoves(r, c, moves)
 
+
+    #Check all the offsets for king moves and see if they are legal moves
     def getKingMoves(self, r, c, moves):
         king_moves = [
             (1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)
@@ -382,12 +453,13 @@ class GameState:
                         moves.append(Move((r, c), (end_row, end_col), Move.MOVE, self.board[r][c]))
                     else:
                         moves.append(Move((r, c), (end_row, end_col), Move.CAPTURE, self.board[r][c], end_piece))
-        self.getCastlingMoves(r, c, moves)
+        self.getCastlingMoves(moves)
 
 
 
     #CASTLING MOVES
-    def getCastlingMoves(self, r, c, moves):
+    def getCastlingMoves(self, moves):
+        #Check whose move, and if they can castle that side, add the move
         if self.whiteToMove:
             if self.canCastleKingside():
                 moves.append(Move((7, 4), (7, 6), Move.CASTLE_KINGSIDE, 'wK'))
@@ -400,6 +472,7 @@ class GameState:
                 moves.append(Move((0, 4), (0, 2), Move.CASTLE_QUEENSIDE, 'bK'))
 
     def canCastleKingside(self):
+        #Checks whiteToMove, and then sees the side. If the pieces are open to that side and not attacked, castling to that side is added.
         if self.whiteToMove:
             return (self.board[7][5] == '..' and self.board[7][6] == '..' and
                     not self.isUnderAttack((7, 4)) and not self.isUnderAttack((7, 5)) and not self.isUnderAttack((7, 6)))
@@ -407,6 +480,7 @@ class GameState:
             return (self.board[0][5] == '..' and self.board[0][6] == '..' and
                     not self.isUnderAttack((0, 4)) and not self.isUnderAttack((0, 5)) and not self.isUnderAttack((0, 6)))
 
+        #Checks whiteToMove, and then sees the side. If the pieces are open to that side and not attacked, castling to that side is added.
     def canCastleQueenside(self):
         if self.whiteToMove:
             return (self.board[7][1] == '..' and self.board[7][2] == '..' and self.board[7][3] == '..' and
@@ -422,20 +496,16 @@ class GameState:
 
     def countPositions(self, depth):
         if depth == 0:
-            return 1, self.evaluate_board()
+            return 1
 
         num_positions = 0
-        total_score = 0
         moves = self.generateValidMoves()
         for move in moves:
             self.makeMove(move)
-            self.whiteToMove = not self.whiteToMove
-            positions, score = self.countPositions(depth - 1)
-            num_positions += positions
-            total_score += score
-            self.whiteToMove = not self.whiteToMove
+            num_positions += self.countPositions(depth - 1)
             self.unmakeMove(move)
-        return num_positions, total_score
+        return num_positions
+
 
     
 
@@ -503,11 +573,13 @@ class GameState:
 
         return score
 
+    #Checks for checkmake
     def isCheckmate(self):
         if self.isInCheck() and len(self.generateValidMoves()) == 0:
             return True
         return False
 
+    #Checks for stalemate
     def isStalemate(self):
         if not self.isInCheck() and len(self.generateValidMoves()) == 0:
             return True
@@ -577,6 +649,21 @@ class GameState:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Move:
     MOVE = 'move'
     CAPTURE = 'capture'
@@ -609,5 +696,4 @@ class Move:
 
 if __name__ == "__main__":
     gs = GameState()
-    best_move = gs.findBestMove(6)
-    print(f"The best move is: {best_move}")
+    print(gs.countPositions(4))
