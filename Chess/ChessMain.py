@@ -1,18 +1,38 @@
 import pygame as p
 from ChessEngineNoBit import GameState, Move
 
-PROMOTION_WINDOW_SIZE = (200, 200)  # Size of the promotion pop-up window
 WIDTH = HEIGHT = 512  # Standard dimensions for the board
 DIMENSION = 8  # Chessboard is 8x8
 SQ_SIZE = HEIGHT // DIMENSION  # Size of each square
 MAX_FPS = 15  # For smooth animations
 IMAGES = {}
+PROMOTION_WINDOW_SIZE = (200, 200)  # Size of the promotion pop-up window
 
 def loadImages():
     """ Loads images of chess pieces into a dictionary """
     pieces = ["wK", "wQ", "wR", "wB", "wN", "wp", "bK", "bQ", "bR", "bB", "bN", "bp"]
     for piece in pieces:
         IMAGES[piece] = p.transform.scale(p.image.load("images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
+
+def selectPromotionPiece(whiteToMove):
+    promotion_window = p.display.set_mode(PROMOTION_WINDOW_SIZE)
+    promotion_window.fill(p.Color("white"))
+    pieces = ['Q', 'R', 'B', 'N']
+    color = 'w' if whiteToMove else 'b'
+    for i, piece in enumerate(pieces):
+        promotion_window.blit(IMAGES[color + piece], p.Rect(50, i * 50, 50, 50))
+    p.display.flip()
+
+    while True:
+        for e in p.event.get():
+            if e.type == p.QUIT:
+                p.quit()
+                quit()
+            elif e.type == p.MOUSEBUTTONDOWN:
+                location = p.mouse.get_pos()
+                selected_row = location[1] // 50
+                if 0 <= selected_row < 4:
+                    return pieces[selected_row]
 
 def main():
     # Initialize pygame
@@ -32,6 +52,7 @@ def main():
     running = True
     sqSelected = None
     playerClicks = []
+    pendingMove = None
 
     while running:
         for e in p.event.get():
@@ -51,7 +72,7 @@ def main():
                         to_square = (playerClicks[1][0], playerClicks[1][1])
                         move_type = Move.MOVE
                         piece_moved = gs.board[from_square[0]][from_square[1]]
-                        piece_captured = gs.board[to_square[0]][to_square[1]]
+                        piece_captured = gs.board[to_square[0]][from_square[1]]
 
                         # Check for castling
                         if piece_moved == 'wK' or piece_moved == 'bK':
@@ -60,15 +81,14 @@ def main():
                             elif from_square[1] - to_square[1] == 2:
                                 move_type = Move.CASTLE_QUEENSIDE
 
+                        if piece_captured != '..':
+                            move_type = Move.CAPTURE
+
                         # Check for en passant
                         if piece_moved == 'wp' or piece_moved == 'bp':
                             if from_square[1] != to_square[1] and piece_captured == '..':
                                 move_type = Move.EN_PASSANT
-                                piece_captured = 'wp' if gs.whiteToMove else 'bp'
-
-                        # Check for capture
-                        if piece_captured != '..':
-                            move_type = Move.CAPTURE
+                                piece_captured = 'bp' if gs.whiteToMove else 'wp'
 
                         # Check for Promotion
                         if piece_moved == 'wp' or piece_moved == 'bp':
@@ -77,12 +97,12 @@ def main():
 
                         move = Move(from_square, to_square, move_type, piece_moved, piece_captured)
 
+                        print(move)
+
                         if move.move_type == Move.PROMOTION:
-                            move.promotion_piece = selectPromotionPiece(gs.whiteToMove)
-                            move.promotion_piece = 'w' + move.promotion_piece if gs.whiteToMove else 'b' + move.promotion_piece
-                            print(move)
+                            promotion_piece = selectPromotionPiece(gs.whiteToMove)
+                            move.promotion_piece = 'w' + promotion_piece if gs.whiteToMove else 'b' + promotion_piece
                         if move in valid_moves:
-                            print(move)
                             gs.makeMove(move)
                             moveMade = True
                             sqSelected = None
@@ -95,9 +115,10 @@ def main():
                             print("move not valid")
                             playerClicks = []  # Allow reselection
                             sqSelected = None
+
         if moveMade:
             moveMade = False
-        
+
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
         p.display.flip()
@@ -119,42 +140,13 @@ def drawPieces(screen, board):
             piece = board[r][c]
             if piece != '..':
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
-def selectPromotionPiece(whiteToMove):
-    promotion_window = p.display.set_mode(PROMOTION_WINDOW_SIZE)
-    promotion_window.fill(p.Color("white"))
-    pieces = ['Q', 'R', 'B', 'N']
-    color = 'w' if whiteToMove else 'b'
-    for i, piece in enumerate(pieces):
-        promotion_window.blit(IMAGES[color + piece], p.Rect(50, i * 50, 50, 50))
-    p.display.flip()
 
-    while True:
-        for e in p.event.get():
-            if e.type == p.QUIT:
-                p.quit()
-                quit()
-            elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos()
-                selected_row = location[1] // 50
-                if 0 <= selected_row < 4:
-                    return pieces[selected_row]
-def get_best_move(gs, valid_moves):
-        best_move = None
-        best_score = -float('inf') if gs.whiteToMove else float('inf')
-        for move in valid_moves:
-            gs.makeMove(move)
-            score = gs.evaluate_board()
-            gs.unmakeMove(move)
-            if gs.whiteToMove:
-                if score > best_score:
-                    best_score = score
-                    best_move = move
-            else:
-                if score < best_score:
-                    best_score = score
-                    best_move = move
-        return best_move
-
+def isPromotionMove(move):
+    if move.piece_moved == 'wp' and move.to_square[0] == 0:
+        return True
+    if move.piece_moved == 'bp' and move.to_square[0] == 7:
+        return True
+    return False
 
 if __name__ == "__main__":
     main()

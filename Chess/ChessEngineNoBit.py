@@ -59,7 +59,6 @@ class GameState:
 
         self.moveLog.append(move)
         self.whiteToMove = not self.whiteToMove
-        self.printBoard()
 
     def unmakeMove(self, move):
         self.board[move.from_square[0]][move.from_square[1]] = move.piece_moved
@@ -479,29 +478,6 @@ class GameState:
             'p': 1
         }
 
-        # Positional score tables (simplified)
-        knight_position_scores = [
-            [-5, -4, -3, -3, -3, -3, -4, -5],
-            [-4, -2,  0,  0,  0,  0, -2, -4],
-            [-3,  0,  1,  1.5,  1.5,  1,  0, -3],
-            [-3,  0.5,  1.5,  2,  2,  1.5,  0.5, -3],
-            [-3,  0,  1.5,  2,  2,  1.5,  0, -3],
-            [-3,  0.5,  1,  1.5,  1.5,  1,  0.5, -3],
-            [-4, -2,  0,  0.5,  0.5,  0, -2, -4],
-            [-5, -4, -3, -3, -3, -3, -4, -5]
-        ]
-        
-        bishop_position_scores = [
-            [-2, -1, -1, -1, -1, -1, -1, -2],
-            [-1,  0,  0,  0,  0,  0,  0, -1],
-            [-1,  0,  0.5,  1,  1,  0.5,  0, -1],
-            [-1,  0.5,  0.5,  1,  1,  0.5,  0.5, -1],
-            [-1,  0,  1,  1,  1,  1,  0, -1],
-            [-1,  1,  1,  1,  1,  1,  1, -1],
-            [-1,  0.5,  0,  0,  0,  0,  0.5, -1],
-            [-2, -1, -1, -1, -1, -1, -1, -2]
-        ]
-
         score = 0
         for r in range(len(self.board)):
             for c in range(len(self.board[r])):
@@ -511,16 +487,8 @@ class GameState:
                     value = piece_values[piece_type]
                     if piece[0] == 'w':
                         score += value
-                        if piece_type == 'N':
-                            score += knight_position_scores[r][c]
-                        elif piece_type == 'B':
-                            score += bishop_position_scores[r][c]
                     else:
                         score -= value
-                        if piece_type == 'N':
-                            score -= knight_position_scores[7-r][7-c]
-                        elif piece_type == 'B':
-                            score -= bishop_position_scores[7-r][7-c]
 
         # Check for checkmates and stalemates
         if self.isCheckmate():
@@ -638,7 +606,12 @@ class Move:
                 f"Move Type: {self.move_type} Moved: {self.piece_moved}, " +
                 f"Captured Piece: {self.piece_captured}, Promotion Piece: {self.promotion_piece}))")
 
-
+import time
 if __name__ == "__main__":
+    
     gs = GameState()
-    print(gs.countPositions(4))
+    start = time.time()
+    print(gs.findBestMove(5))
+    end = time.time()
+
+    print(end  - start)
