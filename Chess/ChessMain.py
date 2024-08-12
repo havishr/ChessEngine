@@ -1,5 +1,6 @@
 import pygame as p
 from ChessEngineNoBit import GameState, Move
+from ChessAI import ChessAI
 
 WIDTH = HEIGHT = 512  # Standard dimensions for the board
 DIMENSION = 8  # Chessboard is 8x8
@@ -43,18 +44,28 @@ def main():
 
     # Get the game state
     gs = GameState()
+    ai = ChessAI(gs)
     valid_moves = gs.generateValidMoves()
-    for move in valid_moves:
-        print(move)
+
     # Set basic starting variables
     moveMade = False
     loadImages()
     running = True
     sqSelected = None
     playerClicks = []
-    pendingMove = None
+    bestMovePrinted = False
 
     while running:
+
+
+        if gs.whiteToMove and not bestMovePrinted:
+            # Print the best move for white (assuming white is the AI)
+            best_move = ai.findBestMove(z)  # Adjust depth as needed
+            if best_move:
+                print(f"Best move: {best_move}")
+            bestMovePrinted = True
+
+
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
@@ -97,7 +108,6 @@ def main():
 
                         move = Move(from_square, to_square, move_type, piece_moved, piece_captured)
 
-                        print(move)
 
                         if move.move_type == Move.PROMOTION:
                             promotion_piece = selectPromotionPiece(gs.whiteToMove)
@@ -107,10 +117,7 @@ def main():
                             moveMade = True
                             sqSelected = None
                             playerClicks = []
-                            print("Next moves")
                             valid_moves = gs.generateValidMoves()
-                            for move in valid_moves:
-                                print(move)
                         else:
                             print("move not valid")
                             playerClicks = []  # Allow reselection
@@ -118,6 +125,7 @@ def main():
 
         if moveMade:
             moveMade = False
+            bestMovePrinted = False
 
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
@@ -128,7 +136,7 @@ def drawGameState(screen, gs):
     drawPieces(screen, gs.board)
 
 def drawBoard(screen):
-    colors = [p.Color("white"), p.Color("green")]
+    colors = [p.Color("white"), p.Color("gray")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             color = colors[(r + c) % 2]

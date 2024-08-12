@@ -466,40 +466,6 @@ class GameState:
         return num_positions
 
 
-    
-
-    def evaluate_board(self):
-        piece_values = {
-            'K': 0,  # King value can be considered as infinity, but for simplicity, set it to 0
-            'Q': 9,
-            'R': 5,
-            'B': 3,
-            'N': 3,
-            'p': 1
-        }
-
-        score = 0
-        for r in range(len(self.board)):
-            for c in range(len(self.board[r])):
-                piece = self.board[r][c]
-                if piece != '..':
-                    piece_type = piece[1]
-                    value = piece_values[piece_type]
-                    if piece[0] == 'w':
-                        score += value
-                    else:
-                        score -= value
-
-        # Check for checkmates and stalemates
-        if self.isCheckmate():
-            if self.whiteToMove:
-                score -= 1000  # White checkmated
-            else:
-                score += 1000  # Black checkmated
-        elif self.isStalemate():
-            score = 0  # Stalemate is a draw
-
-        return score
 
     #Checks for checkmake
     def isCheckmate(self):
@@ -512,68 +478,6 @@ class GameState:
         if not self.isInCheck() and len(self.generateValidMoves()) == 0:
             return True
         return False
-
-
-    def findBestMove(self, depth):
-        def minimax(depth, alpha, beta, maximizingPlayer):
-            if depth == 0 or self.isCheckmate() or self.isStalemate():
-                return self.evaluate_board()
-
-            moves = self.generateValidMoves()
-            if maximizingPlayer:
-                maxEval = -float('inf')
-                for move in moves:
-                    self.makeMove(move)
-                    self.whiteToMove = not self.whiteToMove
-                    eval = minimax(depth - 1, alpha, beta, False)
-                    self.whiteToMove = not self.whiteToMove
-                    self.unmakeMove(move)
-                    maxEval = max(maxEval, eval)
-                    alpha = max(alpha, eval)
-                    if beta <= alpha:
-                        break
-                return maxEval
-            else:
-                minEval = float('inf')
-                for move in moves:
-                    self.makeMove(move)
-                    self.whiteToMove = not self.whiteToMove
-                    eval = minimax(depth - 1, alpha, beta, True)
-                    self.whiteToMove = not self.whiteToMove
-                    self.unmakeMove(move)
-                    minEval = min(minEval, eval)
-                    beta = min(beta, eval)
-                    if beta <= alpha:
-                        break
-                return minEval
-
-        best_move = None
-        best_score = -float('inf') if self.whiteToMove else float('inf')
-        alpha = -float('inf')
-        beta = float('inf')
-        moves = self.generateValidMoves()
-
-        for move in moves:
-            self.makeMove(move)
-            self.whiteToMove = not self.whiteToMove
-            score = minimax(depth - 1, alpha, beta, not self.whiteToMove)
-            self.whiteToMove = not self.whiteToMove
-            self.unmakeMove(move)
-
-            if self.whiteToMove:
-                if score > best_score:
-                    best_score = score
-                    best_move = move
-                alpha = max(alpha, score)
-            else:
-                if score < best_score:
-                    best_score = score
-                    best_move = move
-                beta = min(beta, score)
-
-        return best_move
-
-
 
 
 
